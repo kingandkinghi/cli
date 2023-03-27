@@ -16,4 +16,42 @@ EOF
 cli::import::cmd::main() {
     echo 'function=cmd'
     declare -f cli::import::inline_a
+    cli::import::inline_a
+}
+
+cli::import::cmd::self_test() {
+    diff <(
+        cli import cmd
+    ) - <<-EOF
+		function=cmd
+		cli::import::inline_a () 
+		{ 
+		    cli import inline-a ---backpatch;
+		    cli::import::inline_a "\$@"
+		}
+		function=inline-a
+		cli::import::inline_b0 () 
+		{ 
+		    cli import inline-b0 ---backpatch;
+		    cli::import::inline_b0 "\$@"
+		}
+		function=inline-b0
+		cli::import::inline_c () 
+		{ 
+		    cli import inline-c ---backpatch;
+		    cli::import::inline_c "\$@"
+		}
+		function=inline-c
+		cli::import::inline_b1 () 
+		{ 
+		    cli import inline-b1 ---backpatch;
+		    cli::import::inline_b1 "\$@"
+		}
+		function=inline-b1
+		cli::import::inline_c () 
+		{ 
+		    echo "function=inline-c"
+		}
+		function=inline-c
+		EOF
 }

@@ -6,4 +6,6 @@ CLI_IMPORT=(
 
 cli::import::inline_b1() {
     echo "function=inline-b1"
+    declare -f cli::import::inline_c
+    cli::import::inline_c
 }

@@ -83,6 +83,8 @@ cli::core::variable::write() {
         # map
         else
             ${REPLY_CLI_CORE_VARIABLE_IS_MAP} || cli::assert
+
+            local KEY
             for KEY in ${!REF[@]}; do
                 cli::bash::write "${PREFIX[@]}" "${KEY}" "${REF[$KEY]}"
             done

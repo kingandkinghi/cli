@@ -61,11 +61,10 @@ cli::args::parse::main() {
 
     ARG_META_ALIASES=ALIAS \
         cli::args::parse 'TOKENS'
-    ARG_META_ALIASES=ALIAS \
-        cli::args::parse 'TOKENS'
     local ARGS=${REPLY}
 
     cli::core::variable::write ${ARGS}
+    # declare -f cli::core::variable::write
 }
 
 cli::args::parse() {
@@ -180,27 +179,30 @@ cli::args::parse() {
 
 cli::args::parse::self_test() {
     diff <(
-        cli args tokenize -- --myarr a b c --myprops a=0 b=1 c=2 \
-            | ${CLI_COMMAND[@]} --
+        cli args tokenize -- --myarr a c b --myprops a=0 c=2 b=1 \
+            | cli args parse -- \
+            | sort -k1,1 -s
     ) - <<-EOF
 		first_named myarr
-		named myprops a=0
-		named myprops b=1
-		named myprops c=2
 		named myarr a
-		named myarr b
 		named myarr c
+		named myarr b
+		named myprops a=0
+		named myprops c=2
+		named myprops b=1
 		EOF
 
     diff <(
-        cli args tokenize -- -h --help opt --help key=value -- a0 a1 \
-        | ${CLI_COMMAND[@]} -- <( echo $'h help\nt test\n' )
+        cli args tokenize -- -h --help opt --help key=value -- a0 a2 a1 \
+            | cli args parse -- <( echo $'h help\nt test\n' ) \
+            | sort -k1,1 -s
     ) - <<-EOF
 		first_named help
-		positional a0
-		positional a1
 		named help
 		named help opt
 		named help key=value
+		positional a0
+		positional a2
+		positional a1
 		EOF
 }

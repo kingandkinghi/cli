@@ -3,3 +3,7 @@
 cli::import::main() {
     : # special loader case; export nothing
 }
+
+cli::import::self_test() {
+    cli import cmd --self-test
+}
