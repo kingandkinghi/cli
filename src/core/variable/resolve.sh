@@ -7,7 +7,7 @@ CLI_IMPORT=(
 cli::core::variable::resolve::help() {
     cat << EOF
 Command
-    ${CLI_COMMAND[@]}
+    cli core variable resolve
     
 Summary
     Return a bash variable name given a bash variable and a string of fields.
@@ -17,12 +17,10 @@ Description
     are lower case field names. 
 
     ARG_SCOPE is a map of bash variable names to their core type.
-EOF
-}
 
-cli::core::variable::resolve::main() {
-    cli::core::variable::resolve "$@"
-    echo "${MAPFILE[*]} ${REPLY}"
+    REPLY is the resolved bash name.
+    MAPFILE is the type of the resolved bash name.
+EOF
 }
 
 cli::core::variable::resolve() {
@@ -37,24 +35,28 @@ cli::core::variable::resolve() {
         cli::core::variable::name::resolve "$@"
 }
 
+cli::core::variable::resolve::test() {
+    cli::core::variable::resolve "$@"
+    echo "${MAPFILE[*]} ${REPLY}"
+}
+
 cli::core::variable::resolve::self_test() {
     ARG_SCOPE='SCOPE'
 
     # builtin
     local -A SCOPE=(
-        ['MY_STRING']='string'
+        ['MY_STRING']='string' 
         ['MY_INTEGER']='integer'
         ['MY_BOOLEAN']='boolean'
         ['MY_MAP']='map'
         ['MY_ARRAY']='array'
     )
-    diff <(${CLI_COMMAND[@]} -- MY_STRING) - <<< 'string MY_STRING'
-    diff <(${CLI_COMMAND[@]} -- MY_INTEGER) - <<< 'integer MY_INTEGER'
-    diff <(${CLI_COMMAND[@]} -- MY_BOOLEAN) - <<< 'boolean MY_BOOLEAN'
-    diff <(${CLI_COMMAND[@]} -- MY_MAP) - <<< 'map MY_MAP'
-    diff <(${CLI_COMMAND[@]} -- MY_ARRAY) - <<< 'array MY_ARRAY'
-    diff <(${CLI_COMMAND[@]} -- MY_ARRAY 0) - <<< 'array MY_ARRAY'
-
+    diff <(cli::core::variable::resolve::test MY_STRING) - <<< 'string MY_STRING'
+    diff <(cli::core::variable::resolve::test MY_INTEGER) - <<< 'integer MY_INTEGER'
+    diff <(cli::core::variable::resolve::test MY_BOOLEAN) - <<< 'boolean MY_BOOLEAN'
+    diff <(cli::core::variable::resolve::test MY_MAP) - <<< 'map MY_MAP'
+    diff <(cli::core::variable::resolve::test MY_ARRAY) - <<< 'array MY_ARRAY'
+    
     # modified array
     local -A SCOPE=(
         ['VAR']='map_of array'
@@ -62,8 +64,7 @@ cli::core::variable::resolve::self_test() {
     local -A VAR=(
         ['seq']=0
     )
-    local -a MY_MAP_OF_ARRAY_0=( 'fib' 'pi' )
-    diff <(${CLI_COMMAND[@]} -- VAR seq) - <<< 'array VAR_0'
+    diff <(cli::core::variable::resolve::test VAR seq) - <<< 'array VAR_0'
 
     # modified integer
     local -A SCOPE=(
@@ -79,10 +80,10 @@ cli::core::variable::resolve::self_test() {
     local -A VAR_0_0=11235
     local -A VAR_0_1=3141
 
-    diff <(${CLI_COMMAND[@]} -- VAR) - <<< 'map_of map_of integer VAR'
-    diff <(${CLI_COMMAND[@]} -- VAR seq) - <<< 'map_of integer VAR_0'
-    diff <(${CLI_COMMAND[@]} -- VAR seq fib) - <<< 'integer VAR_0_0'
-    diff <(${CLI_COMMAND[@]} -- VAR seq pi) - <<< 'integer VAR_0_1'
+    diff <(cli::core::variable::resolve::test VAR) - <<< 'map_of map_of integer VAR'
+    diff <(cli::core::variable::resolve::test VAR seq) - <<< 'map_of integer VAR_0'
+    diff <(cli::core::variable::resolve::test VAR seq fib) - <<< 'integer VAR_0_0'
+    diff <(cli::core::variable::resolve::test VAR seq pi) - <<< 'integer VAR_0_1'
 
     # user defined type
     local -A CLI_TYPE_VERSION=(
@@ -128,10 +129,10 @@ cli::core::variable::resolve::self_test() {
         ['c']='d'
     )
 
-    diff <(${CLI_COMMAND[@]} -- META allow color) - <<< 'map META_ALLOW_0'
-    diff <(${CLI_COMMAND[@]} -- META mmm a b) - <<< 'map META_MMM_0_0'
-    diff <(${CLI_COMMAND[@]} -- META positional) - <<< 'boolean META_POSITIONAL'
-    diff <(${CLI_COMMAND[@]} -- META version) - <<< 'version META_VERSION'
-    diff <(${CLI_COMMAND[@]} -- META version major) - <<< 'integer META_VERSION_MAJOR'
-    diff <(${CLI_COMMAND[@]} -- META version minor) - <<< 'integer META_VERSION_MINOR'
+    diff <(cli::core::variable::resolve::test META allow color) - <<< 'map META_ALLOW_0'
+    diff <(cli::core::variable::resolve::test META mmm a b) - <<< 'map META_MMM_0_0'
+    diff <(cli::core::variable::resolve::test META positional) - <<< 'boolean META_POSITIONAL'
+    diff <(cli::core::variable::resolve::test META version) - <<< 'version META_VERSION'
+    diff <(cli::core::variable::resolve::test META version major) - <<< 'integer META_VERSION_MAJOR'
+    diff <(cli::core::variable::resolve::test META version minor) - <<< 'integer META_VERSION_MINOR'
 }

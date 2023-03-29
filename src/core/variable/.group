@@ -20,10 +20,11 @@ cli::core::variable::main() {
 
 cli::core::variable::self_test() {
     cli core variable name .group --self-test
+    cli core variable json .group --self-test
     cli core variable get-info --self-test
     cli core variable parse --self-test
     cli core variable resolve --self-test
-    echo cli core variable write --self-test
+    cli core variable write --self-test
     cli core variable save --self-test
     cli core variable load --self-test
     cli core variable initialize --self-test

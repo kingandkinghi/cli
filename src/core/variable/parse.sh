@@ -6,7 +6,7 @@ Command
     ${CLI_COMMAND[@]}
     
 Summary
-    Return type in MAPFILE and variable name in REPLY.
+    Parse positional arguments and return type in MAPFILE and variable name in REPLY.
 
 Description
     Positional arguments are the type followed by the variable name.
@@ -14,7 +14,8 @@ Description
     Type names are lower case separated by underbars.
     The variable name must be uppercase separated by underbars.
 
-    No semantic verification of the type is preformed.
+    No semantic verification of the type is preformed. Positional arguments after the
+    variable name are ignored.
 EOF
 }
 

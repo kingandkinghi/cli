@@ -57,7 +57,8 @@ cli::args::verify::main() {
     ARG_META_GROUP=${META_GROUP} \
         cli::args::verify MY_ARGS
 
-    cli::core::variable::write MY_ARGS
+    cli core variable json write ---source
+    cli::core::variable::json::write MY_ARGS | jq --sort-keys
 }
 
 cli::args::verify() {
@@ -193,28 +194,44 @@ cli::args::verify::self_test() (
                 <( cli::core::variable::write ${ARG_META}_ALIAS ) \
             | cli args verify --
     ) - <<-EOF || cli::assert
-			first_named id
-			positional a0
-			positional a1
-			named fruit banana
-			named id 42
-			named header Foo
-			EOF
-    return
+		{
+		  "first_named": "id",
+		  "named": {
+		    "fruit": [
+		      "banana"
+		    ],
+		    "header": [
+		      "Foo"
+		    ],
+		    "help": [],
+		    "id": [
+		      "42"
+		    ]
+		  },
+		  "path": [],
+		  "positional": [
+		    "a0",
+		    "a1"
+		  ]
+		}
+		EOF
 
     meta() {
-        echo 'type props map'
-        echo 'regex props ^[0-9]$'
+        echo 'group * type props map'
+        echo 'group * regex props ^[0-9]$'
     }
-    
+    meta
     # supply list (e.g. '--props a=0 b=1')
     cli args tokenize -- --props a=0 b=1 \
-        | cli args parse \
-        | cli args verify -- <( meta ) \
-        | assert::pipe_records_eq \
-            'first_named props' \
-            'named props a=0' \
-            'named props b=1'
+        | cli args parse -- \
+        | cli args verify -- <( meta )
+        
+    return
+        #  \
+        # | assert::pipe_records_eq \
+        #     'first_named props' \
+        #     'named props a=0' \
+        #     'named props b=1'
 
     meta() {
         echo 'type name array'

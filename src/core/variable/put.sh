@@ -86,10 +86,10 @@ cli::core::variable::put() {
             fi
 
             local KEY="$1"
-            [[ "${KEY}" =~ . ]] || cli::assert \
-                "Failed to use empty key to assign '$2' to map '${NAME}'."
-
             local VALUE="${2-}"
+
+            [[ "${KEY}" =~ . ]] || cli::assert \
+                "Failed to use empty key to assign '${VALUE}' to map '${NAME}'."
 
             # map key and maybe a value supplied
             REF+=( ["${KEY}"]="${VALUE}" )

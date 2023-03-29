@@ -47,7 +47,11 @@ cli::core::variable::name::modifications() {
 cli::core::variable::name::modifications::self_test() {
     local -A MY_TEST=( ['foo']=0 ['bar']=1 )
     
-    diff <(ARG_TYPE='map_of string' ${CLI_COMMAND[@]} ---mapfile MY_TEST | sort) <(
+    diff <(
+        ARG_TYPE='map_of map_of string' \
+            cli core variable name modifications ---mapfile MY_TEST \
+                | sort
+    ) <(
         echo MY_TEST_0
         echo MY_TEST_1
     )

@@ -1,0 +1,19 @@
+#!/usr/bin/env CLI_TOOL=cli bash-cli-part
+
+cli::core::variable::json::help() {
+    cat << EOF
+Command
+    ${CLI_COMMAND[@]}
+
+Description
+    write - Serialize a variable to JSON.
+EOF
+}
+
+cli::core::variable::json::main() {
+    :
+}
+
+cli::core::variable::json::self_test() {
+    cli core variable json write --self-test
+}

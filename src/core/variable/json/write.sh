@@ -46,7 +46,7 @@ Examples
 EOF
 }
 
-cli::core::variable::write() {
+cli::core::variable::json::write() {
     local ARG_SCOPE=${ARG_SCOPE-'CLI_SCOPE'}
     local NAME="${1-}"
 
@@ -56,8 +56,8 @@ cli::core::variable::write() {
     local TYPE="${MAPFILE[*]}"
 
     # private stack
-    local PREFIX_NAME=CLI_CORE_VARIABLE_WRITE_PREFIX
-    local -n PREFIX=CLI_CORE_VARIABLE_WRITE_PREFIX
+    local PREFIX_NAME=CLI_CORE_VARIABLE_JSON_WRITE_PREFIX
+    local -n PREFIX=CLI_CORE_VARIABLE_JSON_WRITE_PREFIX
 
     # leaf
     if ${REPLY_CLI_CORE_VARIABLE_IS_BUILTIN}; then
@@ -67,28 +67,41 @@ cli::core::variable::write() {
         if ${REPLY_CLI_CORE_VARIABLE_IS_BOOLEAN}; then
 
             if ${REF}; then
-                cli::bash::write "${PREFIX[@]}"
+                printf '%s' "true"
+            else
+                printf '%s' "false"
             fi
 
         # scaler
+        elif ${REPLY_CLI_CORE_VARIABLE_IS_INTEGER}; then
+            printf '%s' "${REF}"
+
+        # scaler
         elif ${REPLY_CLI_CORE_VARIABLE_IS_SCALER}; then
-            cli::bash::write "${PREFIX[@]}" "${REF}"
+            printf '"%s"' "${REF}"
 
         # array
         elif ${REPLY_CLI_CORE_VARIABLE_IS_ARRAY}; then
+            printf "["
             local VALUE
+            local COMMA=
             for VALUE in "${REF[@]}"; do
-                cli::bash::write "${PREFIX[@]}" "${VALUE}"
+                printf '%s"%s"' "${COMMA}" "${VALUE}"
+                COMMA=','
             done
+            printf "]"
 
         # map
         else
             ${REPLY_CLI_CORE_VARIABLE_IS_MAP} || cli::assert
-
+            printf "{"
             local KEY
+            local COMMA=
             for KEY in ${!REF[@]}; do
-                cli::bash::write "${PREFIX[@]}" "${KEY}" "${REF[$KEY]}"
+                printf '%s"%s":"%s"' "${COMMA}" "${KEY}" "${REF[$KEY]}"
+                COMMA=','
             done
+            printf "}"
         fi
 
     else
@@ -112,16 +125,21 @@ cli::core::variable::write() {
 
         local -a PREFIX_COPY=( "${PREFIX[@]}" )
 
+        printf '{'
         local SEGMENT
+        local COMMA=
         for SEGMENT in "${SEGMENTS[@]}"; do
-            local -a CLI_CORE_VARIABLE_WRITE_PREFIX=( "${PREFIX_COPY[@]}" "${SEGMENT}" )
+            local -a CLI_CORE_VARIABLE_JSON_WRITE_PREFIX=( "${PREFIX_COPY[@]}" "${SEGMENT}" )
             cli::core::variable::resolve "${NAME}" "${SEGMENT}"
-            cli::core::variable::write "${REPLY}"
+            printf '%s"%s":' "${COMMA}" "${SEGMENT}"
+            COMMA=','
+            cli::core::variable::json::write "${REPLY}"
         done
+        printf '}'
     fi
 }
 
-cli::core::variable::write::self_test() {
+cli::core::variable::json::write::self_test() {
     ARG_SCOPE='SCOPE'
 
     # builtin
@@ -135,39 +153,32 @@ cli::core::variable::write::self_test() {
 
     # string
     local MY_STRING='Hello World!'
-    diff <(cli core variable write -- MY_STRING) - <<< 'Hello\ World!'
+    diff <(cli core variable json write -- MY_STRING; echo) - <<< '"Hello World!"'
 
     # integer
     local -i MY_INTEGER=42
-    diff <(cli core variable write -- MY_INTEGER) - <<< '42'
+    diff <(cli core variable json write -- MY_INTEGER; echo) - <<< '42'
 
     # boolean true
     local MY_BOOLEAN=true
-    diff <(cli core variable write -- MY_BOOLEAN) - <<< ''
+    diff <(cli core variable json write -- MY_BOOLEAN; echo) - <<< 'true'
 
     # boolean false
     local MY_BOOLEAN=false
-    diff <(cli core variable write -- MY_BOOLEAN) /dev/null
+    diff <(cli core variable json write -- MY_BOOLEAN; echo) - <<< 'false'
 
     # array
     local -a MY_ARRAY=( 'a a b a' )
-    diff <(cli core variable write -- MY_ARRAY) - <<< 'a\ a\ b\ a'
+    diff <(cli core variable json write -- MY_ARRAY; echo) - <<< '["a a b a"]'
 
     # array
     local -a MY_ARRAY=( a a b a )
-    diff <(cli core variable write -- MY_ARRAY) <(
-        echo a
-        echo a
-        echo b
-        echo a
-    )
+    diff <(cli core variable json write -- MY_ARRAY; echo) - <<< '["a","a","b","a"]'
 
     # map
     local -A MY_MAP=( [key]=value [element]= )
-    diff <(cli core variable write -- MY_MAP | sort) <(
-        echo "element"
-        echo key value
-    )
+    diff <(cli core variable json write -- MY_MAP | jq --sort-keys) \
+        <(echo '{"key":"value","element":""}' | jq --sort-keys)
 
     # map_of map
     local -A SCOPE=(
@@ -181,10 +192,8 @@ cli::core::variable::write::self_test() {
         ['pi']=3141
         ['fib']=11235
     )
-    diff <(cli core variable write -- MOD_MAP | sort) <(
-        echo seq fib 11235
-        echo seq pi 3141
-    )
+    diff <(cli core variable json write -- MOD_MAP | jq --sort-keys) \
+        <(echo '{"seq":{"pi":"3141","fib":"11235"}}' | jq --sort-keys)
     
     # map_of map_of integer
     local -A SCOPE=(
@@ -202,10 +211,8 @@ cli::core::variable::write::self_test() {
     )
     local -A MOD_MOD_INTEGER_0_0=11235
     local -A MOD_MOD_INTEGER_0_1=3141
-    diff <(cli core variable write -- MOD_MOD_INTEGER | sort) <(
-        echo seq fib 11235
-        echo seq pi 3141
-    )
+    diff <(cli core variable json write -- MOD_MOD_INTEGER | jq --sort-keys) \
+        <(echo '{"seq":{"pi":3141,"fib":11235}}' | jq --sort-keys)
 
     # map_of array
     local -A SCOPE=(
@@ -216,10 +223,8 @@ cli::core::variable::write::self_test() {
         ['seq']=0
     )
     local -a MOD_ARRAY_0=( 'fib' 'pi' )
-    diff <(cli core variable write -- MOD_ARRAY) <(
-        echo seq fib
-        echo seq pi
-    )
+    diff <(cli core variable json write -- MOD_ARRAY; echo) \
+        <(echo '{"seq":["fib","pi"]}')
 
     # udt
     local -A SCOPE=(
@@ -267,13 +272,27 @@ cli::core::variable::write::self_test() {
     local -A META_MMM_0_0=(
         ['c']='d'
     )
-
-    diff <(cli core variable write -- META | sort) <(
-        echo 'allow color black' 
-        echo 'allow color white' 
-        echo 'mmm a b c d' 
-        echo 'positional' 
-        echo 'version major 1' 
-        echo 'version minor 2'
-    )
+    diff <(cli core variable json write -- META | jq --sort-keys) - <<-EOF
+		{
+		  "allow": {
+		    "color": {
+		      "black": "",
+		      "white": ""
+		    }
+		  },
+		  "mmm": {
+		    "a": {
+		      "b": {
+		        "c": "d"
+		      }
+		    }
+		  },
+		  "never": false,
+		  "positional": true,
+		  "version": {
+		    "major": 1,
+		    "minor": 2
+		  }
+		}
+		EOF
 }

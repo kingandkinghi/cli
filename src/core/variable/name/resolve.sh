@@ -55,15 +55,15 @@ cli::core::variable::name::resolve() {
             
             # array
             if ${REPLY_CLI_CORE_TYPE_IS_ARRAY}; then
-                (( $# <= 1 )) || cli::assert "Expected array index but got '$@'."
+                (( $# == 0 )) || cli::assert "Array cannot have field '$@'."
 
             # map
             elif ${REPLY_CLI_CORE_TYPE_IS_MAP}; then
-                (( $# <= 1 )) || cli::assert "Expected map key but got '$@'."
+                (( $# == 0 )) || cli::assert "Map cannot have field '$@'."
 
             # scaler
             else
-                (( $# == 0 )) || cli::assert "Scaler type '${TYPE}' has no field '$@'."
+                (( $# == 0 )) || cli::assert "Scaler of type '${TYPE}' cannot have field '$@'."
             fi
 
         # modified
@@ -106,8 +106,6 @@ cli::core::variable::name::resolve::self_test() {
     diff <(${CLI_COMMAND[@]} -- boolean VAR) - <<< 'boolean VAR'
     diff <(${CLI_COMMAND[@]} -- map VAR) - <<< 'map VAR'
     diff <(${CLI_COMMAND[@]} -- array VAR) - <<< 'array VAR'
-
-    diff <(${CLI_COMMAND[@]} -- array VAR 0) - <<< 'array VAR'
 
     # map_of map_of integer
     (
