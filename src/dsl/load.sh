@@ -45,29 +45,27 @@ cli::dsl::load() {
     local PARSE="CLI_HELP_PARSE"
 
     # declare temp variable to hold inbound stream
-    ARG_TYPE="cli_help_parse" \
-        cli::core::variable::declare ${PARSE}
+    cli::core::variable::declare cli_help_parse "${PARSE}"
 
     # load stream
-    cli::core::variable::read ${PARSE}
+    cli::core::variable::read "${PARSE}"
 
-    ARG_TYPE="cli_meta" \
-        cli::core::variable::declare ${RESULT}
+    cli::core::variable::declare cli_meta "${RESULT}"
 
     # alias' must be unique across all group
-    cli::core::variable::write ${PARSE}_GROUP \
+    cli::core::variable::write "${PARSE}_GROUP" \
         | awk '$2=="alias" { print $3, $4 }' \
         | sort \
         | tee >(
             sort -uC || cli::assert 'Duplicate alias detected.'
-        ) | cli::core::variable::read ${RESULT}_ALIAS
+        ) | cli::core::variable::read "${RESULT}_ALIAS"
 
     # group specific metadata; e.g. the group id is not '*'
     cli::core::variable::write ${PARSE}_GROUP \
         | awk '$1 != "*" && $2 != "alias"' \
-        | cli::core::variable::read ${RESULT}_GROUP
+        | cli::core::variable::read "${RESULT}_GROUP"
 
-    local -n GROUP_REF=${RESULT}_GROUP
+    local -n GROUP_REF="${RESULT}_GROUP"
 
     local -a GROUP_NAMES=( "${!GROUP_REF[@]}" )
     if (( ${#GROUP_NAMES[@]} == 0 )); then
@@ -80,7 +78,7 @@ cli::dsl::load() {
         cli::core::variable::write ${PARSE}_GROUP \
             | awk '$2 != "alias"' \
             | awk -v group="${GROUP_NAME}" '$1 == "*" { $1 = group; print; }' \
-			| cli::core::variable::read ${RESULT}_GROUP
+			| cli::core::variable::read "${RESULT}_GROUP"
     done
 
     cli::core::variable::write "${RESULT}"

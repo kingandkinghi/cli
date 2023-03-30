@@ -100,8 +100,7 @@ cli::core::variable::initialize::self_test() (
         [minor]='integer'
     )
 
-    ARG_TYPE=version \
-        cli::core::variable::declare MY_VERSION
+    cli::core::variable::declare version MY_VERSION
 
     MY_VERSION_MAJOR=1
     MY_VERSION_MINOR=2

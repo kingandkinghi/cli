@@ -33,17 +33,16 @@ cli::dsl::build::main() (
     local NAME=${1-}
     [[ "${NAME}" ]] || cli::assert 'Missing name.'
 
-    ARG_TYPE='cli_meta'
-        cli::core::variable::declare ${NAME}
+	cli::core::variable::declare cli_meta "${NAME}"
 
     cat | tee "${ARG_CLI_DSL_DECLARE_HELP-/dev/null}" \
         | cli dsl tokenize | tee "${ARG_CLI_DSL_DECLARE_TOKENIZE-/dev/null}" \
         | cli dsl parse | tee "${ARG_CLI_DSL_DECLARE_PARSE-/dev/null}" \
         | cli dsl meta | tee "${ARG_CLI_DSL_DECLARE_META-/dev/null}" \
         | cli dsl load -- | tee "${ARG_CLI_DSL_DECLARE_LOAD-/dev/null}" \
-        | cli::core::variable::read ${NAME}
+        | cli::core::variable::read "${NAME}"
 
-	cli::core::emit::global ${NAME}
+	cli::core::emit::global "${NAME}"
 )
 
 cli::dsl::build::self_test() (

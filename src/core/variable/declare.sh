@@ -4,6 +4,7 @@ CLI_IMPORT=(
     "cli core type get"
     "cli core type get-info"
     "cli core type to-bash"
+    "cli core variable parse"
     "cli core variable get-info"
     "cli core variable initialize"
     "cli core variable name resolve"
@@ -28,23 +29,21 @@ EOF
 }
 
 cli::core::variable::declare::main() {
-    cli core variable parse ---source
-
     cli::core::variable::parse "$@"
-
-    ARG_TYPE="${MAPFILE[@]}" \
-        cli::core::variable::declare "${REPLY}"
+    cli::core::variable::declare "${MAPFILE[*]}" "${REPLY}"
 }
 
 cli::core::variable::declare() {
     local SCOPE_NAME="${ARG_SCOPE-}"
     [[ "${SCOPE_NAME}" ]] || cli::assert 'Missing scope.'
 
-    local TYPE="${ARG_TYPE-}"
+    local TYPE="${1-}"
     [[ "${TYPE}" ]] || cli::assert 'Missing type.'
+    shift
 
     local NAME="${1-}"
     [[ "${NAME}" ]] || cli::assert 'Missing name.'
+    shift
 
     # redefinition is a noop
     if cli::core::variable::get_info "${NAME}"; then
@@ -98,21 +97,18 @@ cli::core::variable::declare() {
             local FIELD_TYPE="${MAPFILE[*]}"
 
             # recursively initialize bash variable for field
-            ARG_TYPE="${FIELD_TYPE}" \
-                cli::core::variable::declare "${REPLY}"
+            cli::core::variable::declare "${FIELD_TYPE}" "${REPLY}"
         done
     fi
 }
 
 cli::core::variable::declare::self_test() (
-    cli core type to-bash ---source
-
     local -A SCOPE=()
     local ARG_SCOPE='SCOPE'
 
     test() {
         # declare the variable
-        ${CLI_COMMAND[@]} --- "$@"
+        cli core variable declare -- "$@"
 
         test::verify() {
             local TYPE="$1"
@@ -125,15 +121,15 @@ cli::core::variable::declare::self_test() (
 
             cli::core::type::get_info ${TYPE}
 
-            if ! ${REPLY_CLI_CORE_TYPE_IS_USER_DEFINED}; then
+            if ! "${REPLY_CLI_CORE_TYPE_IS_USER_DEFINED}"; then
 
                 # get info about the underlying bash variable
                 cli::bash::variable::get_info "${NAME}"
                 local ACUTAL_BASH_TYPE="${REPLY}"
 
                 # the bash variable should be initialized and mutable
-                ! ${REPLY_CLI_BASH_VARIABLE_IS_UNINITIALIZED} || cli::assert
-                ! ${REPLY_CLI_BASH_VARIABLE_IS_READONLY} || cli::assert
+                ! "${REPLY_CLI_BASH_VARIABLE_IS_UNINITIALIZED}" || cli::assert
+                ! "${REPLY_CLI_BASH_VARIABLE_IS_READONLY}" || cli::assert
 
                 # the bash variable type should correspond to the core type
                 cli::core::type::to_bash ${TYPE} 

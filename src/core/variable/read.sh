@@ -24,14 +24,11 @@ cli::core::variable::read::main() {
     cli core variable parse ---source
 
     cli::core::variable::parse "$@"
-    local NAME=${REPLY}
+    local NAME="${REPLY}"
     local TYPE="${MAPFILE[*]}"
 
-    ARG_TYPE="${TYPE}" \
-        cli::core::variable::declare "${NAME}"
-
+    cli::core::variable::declare "${TYPE}" "${NAME}"
     cli::core::variable::read "${NAME}"
-
     cli::dump "${NAME}" "${NAME}_*"
 }
 

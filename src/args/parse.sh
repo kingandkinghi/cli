@@ -41,7 +41,7 @@ cli::args::parse::main() {
     local -A SCOPE=()
     ARG_SCOPE='SCOPE'
 
-    ARG_TYPE='cli_meta' cli::core::variable::declare MY_META
+    cli::core::variable::declare cli_meta MY_META
     cli::core::variable::read MY_META
     cli::args::tokenize "$@"
     cli::args::parse MY_META_ALIAS "${REPLY}"
@@ -63,8 +63,7 @@ cli::args::parse() {
     
     local ARGS='REPLY_CLI_ARGS_PARSE'
     cli::core::variable::unset "${ARGS}"
-    ARG_TYPE='cli_args' \
-        cli::core::variable::declare "${ARGS}"
+    cli::core::variable::declare cli_args "${ARGS}"
 
     local -i current=0
     local token_name=

@@ -155,8 +155,7 @@ cli::core::variable::put() {
     local NEXT_TYPE="${MAPFILE[*]}"
 
     # declare variable
-    ARG_TYPE="${NEXT_TYPE}" \
-        cli::core::variable::declare "${NEXT_NAME}"
+    cli::core::variable::declare "${NEXT_TYPE}" "${NEXT_NAME}"
 
     # set variable
     cli::core::variable::put "${NEXT_NAME}" "$@"
@@ -168,9 +167,7 @@ cli::core::variable::put::self_test() {
 
     dsl() {
         local RESULT="MY_REPLY_CLI_DSL_META"
-        ARG_TYPE="cli_help_parse" \
-            cli::core::variable::declare "${RESULT}"
-    
+        cli::core::variable::declare cli_help_parse "${RESULT}"
         cli::core::variable::put "${RESULT}" group "*" type "depth" "string"
         cli::core::variable::put "${RESULT}" group "*" type "max" "string"
 

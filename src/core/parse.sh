@@ -34,7 +34,7 @@ cli::core::parse::main() {
     local -A SCOPE=()
     ARG_SCOPE='SCOPE'
 
-    ARG_TYPE='cli_meta' cli::core::variable::declare MY_META
+    cli::core::variable::declare cli_meta MY_META
     cli::core::variable::read MY_META
 
     cli::core::parse MY_META "$@"
