@@ -4,7 +4,10 @@ CLI_IMPORT=(
     "cli args resolve"
     "cli args tokenize"
     "cli args verify"
+    "cli core variable resolve"
     "cli core variable get-info"
+    "cli core variable declare"
+    "cli core variable read"
 )
 
 cli::core::parse::help() {
@@ -21,38 +24,41 @@ Declare
 
     \$1 - \$n are command line arguments.
 
-    REPLY_CLI_PARSE_ARGS is the parsed arguments.
-
+    REPLY_CLI_ARGS_TOKENS is the argument tokens.
+    REPLY_CLI_ARGS_PARSE is the parsed arguments.
     REPLY is the metadata for the argument group.
 EOF
+}
+
+cli::core::parse::main() {
+    local -A SCOPE=()
+    ARG_SCOPE='SCOPE'
+
+    ARG_TYPE='cli_meta' cli::core::variable::declare MY_META
+    cli::core::variable::read MY_META
+
+    cli::core::parse MY_META "$@"
 }
 
 cli::core::parse() {
     [[ "${ARG_SCOPE-}" ]] || cli::assert 'Missing scope.'
 
-    # somehow the metadata should have been declared
-    cli::core::variable::get_info ${CLI_META} || cli::assert "Missing metadata."
-    ${REPLY_CLI_CORE_TYPE_IS_USER_DEFINED} || cli::assert "Metadata not user defined type."
+    local META="$1"
+    shift
 
-    # tokenize
     cli::args::tokenize "$@"
+    cli::args::parse "${META}_ALIAS" "${REPLY}"
+    local ARGS="${REPLY}"
 
-    # parse
-    ARG_META_ALIASES=${CLI_META}_ALIAS \
-        cli::args::parse REPLY_CLI_ARGS_TOKENS
+    cli::args::resolve "${META}_GROUP" "${ARGS}"
+    cli::core::variable::resolve "${META}_GROUP" "${REPLY}"
+    local META_GROUP="${REPLY}"
 
-    # resolve
-    ARG_META_GROUPS=${CLI_META}_GROUP \
-        cli::args::resolve REPLY_CLI_PARSE_ARGS
-    local CLI_META_GROUP=${REPLY}
-
-    # verify
-    ARG_META_GROUP=${CLI_META_GROUP} \
-        cli::args::verify REPLY_CLI_PARSE_ARGS
-
-    REPLY=${CLI_META_GROUP}
+    cli::args::verify "${META_GROUP}" "${ARGS}"
+    REPLY="${META_GROUP}"
 }
 
 cli::core::parse::self_test() {
-    return
+    cli core parse -- --id 42 -f banana -h --header Foo -- a0 a1 \
+        < <( cli sample kitchen-sink ---load )
 }   

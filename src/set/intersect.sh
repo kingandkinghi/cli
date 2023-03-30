@@ -55,5 +55,6 @@ cli::set::intersect::self_test() {
     diff <(${CLI_COMMAND[@]} -- 'a b c' 'a b') - <<< $'a\nb'
     diff <(${CLI_COMMAND[@]} -- 'a b c' 'b c d') - <<< $'b\nc'
     diff <(${CLI_COMMAND[@]} -- 'a b c' 'd e f') - <<< $''
+    diff <(${CLI_COMMAND[@]} -- 'a' 'a a') - <<< $'a'
     diff <(${CLI_COMMAND[@]} -- '' '') - <<< $''
 }

@@ -5,6 +5,7 @@ CLI_IMPORT=(
     "cli core variable read"
     "cli core variable unset"
     "cli core variable write"
+    "cli args tokenize"
 )
 
 cli::args::parse::help() {
@@ -16,28 +17,23 @@ Summary
     Parse a command line.
 
 Description
-    Consume a stream of tokens produced via 'cli args tokenize' and produce a
-    serialized stream of 'cli_args'. Accept as the first positional argument
-    a serialized stream of 'map' of aliases. Aliases will be resolved.
-
-Arguments
-    --                      : Metadata stream.
+    Given positional and named arguments return JSON blob. Use -- before arguments
+    to distinguish arguments to the parse command itself (e.g. like '-h') vs those
+    to be parsed. Read pair records form stdin for aliases (e.g. 'h help').
 EOF
     cat << EOF
 
 Examples
-    Parse 'grp cmd --option value -hg -- a0 a1'
-        cli args tokenize -- grp cmd --option value -h --param/key value -- a0 a1 \\
-        | ${CLI_COMMAND[@]} -- <( echo 'h help' )
+    # Parse '--option value -h --param/key value -- a0 a1'
+    Parse '--option value -h-- a0 a1'
+        cli args parse -- --option value -h -- a0 a1 \\
+            < <(cli sample simple ---load) | sort
 
     Produces:
-        path grp
-        path cmd
-        property param key value
-        positional a0
-        positional a1
-        named help 
-        named option value
+        named help 0
+        named option 0 value
+        positional 0 a0
+        positional 1 a1
 EOF
 }
 
@@ -45,42 +41,31 @@ cli::args::parse::main() {
     local -A SCOPE=()
     ARG_SCOPE='SCOPE'
 
-    ARG_TYPE='map' \
-        cli::core::variable::declare ALIAS
-    cli::core::variable::read ALIAS < "${1-/dev/null}"
-
-    ARG_TYPE='cli_tokens' \
-        cli::core::variable::declare TOKENS
-
-    while read token_name identifier; do
-        local token="CLI_ARG_TOKEN_${token_name}"
-
-        TOKENS_ID+=( "${!token}" )
-        TOKENS_IDENTIFIER+=( "${identifier}" )
-    done
-
-    ARG_META_ALIASES=ALIAS \
-        cli::args::parse 'TOKENS'
-    local ARGS=${REPLY}
-
-    cli::core::variable::write ${ARGS}
-    # declare -f cli::core::variable::write
+    ARG_TYPE='cli_meta' cli::core::variable::declare MY_META
+    cli::core::variable::read MY_META
+    cli::args::tokenize "$@"
+    cli::args::parse MY_META_ALIAS "${REPLY}"
+    cli::core::variable::write "${REPLY}"
 }
 
 cli::args::parse() {
     : ${ARG_SCOPE?'Missing scope.'}
-    local TOKENS=${1?'Missing tokens.'}
-    
-    local -n ALIAS_REF=${ARG_META_ALIASES}
+
+    local ALIAS="$1"
+    shift
+
+    local TOKENS="$1"
+    shift
+
+    local -n ALIAS_REF="${ALIAS}"
     local -n TOKEN_REF="${TOKENS}_ID"
     local -n IDENTIFIER_REF="${TOKENS}_IDENTIFIER"
     
-    local ARGS='REPLY_CLI_PARSE_ARGS'
-    cli::core::variable::unset ${ARGS}
+    local ARGS='REPLY_CLI_ARGS_PARSE'
+    cli::core::variable::unset "${ARGS}"
     ARG_TYPE='cli_args' \
-        cli::core::variable::declare ${ARGS}
+        cli::core::variable::declare "${ARGS}"
 
-    local -i named_count=0
     local -i current=0
     local token_name=
     local identifier=
@@ -154,11 +139,6 @@ cli::args::parse() {
         local option="${identifier}"
         read_token
 
-        if (( named_count == 0 )); then
-            cli::core::variable::put ${ARGS} first_named "${option}"
-        fi
-        named_count=$(( named_count + 1 ))
-        
         # flags
         if (( token != CLI_ARG_TOKEN_VALUE )); then
             cli::core::variable::put ${ARGS} named "${option}" ''
@@ -174,35 +154,33 @@ cli::args::parse() {
 
     START
 
-    REPLY=${ARGS}
+    REPLY="${ARGS}"
 }
 
 cli::args::parse::self_test() {
     diff <(
-        cli args tokenize -- --myarr a c b --myprops a=0 c=2 b=1 \
-            | cli args parse -- \
-            | sort -k1,1 -s
+        cli args parse --myarr a c b --myprops a=0 c=2 b=1 </dev/null \
+            | sort
     ) - <<-EOF
-		first_named myarr
-		named myarr a
-		named myarr c
-		named myarr b
-		named myprops a=0
-		named myprops c=2
-		named myprops b=1
+		named myarr 0 a
+		named myarr 1 c
+		named myarr 2 b
+		named myprops 0 a=0
+		named myprops 1 c=2
+		named myprops 2 b=1
 		EOF
 
     diff <(
-        cli args tokenize -- -h --help opt --help key=value -- a0 a2 a1 \
-            | cli args parse -- <( echo $'h help\nt test\n' ) \
-            | sort -k1,1 -s
+        cli args parse -- -h -t --test opt --test key=value -- a0 a2 a1 \
+            <<< $'alias h help\nalias t test\n'  \
+            | sort
     ) - <<-EOF
-		first_named help
-		named help
-		named help opt
-		named help key=value
-		positional a0
-		positional a2
-		positional a1
+		named help 0
+		named test 0
+		named test 1 opt
+		named test 2 key=value
+		positional 0 a0
+		positional 1 a2
+		positional 2 a1
 		EOF
 }

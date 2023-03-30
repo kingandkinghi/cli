@@ -116,8 +116,6 @@ readonly -A CLI_TYPE_CLI_TOKENS=(
     [identifier]="array"
 )
 readonly -A CLI_TYPE_CLI_ARGS=(
-    [path]="array"
-    [first_named]="string"
     [named]="map_of array"
     [positional]="array"
 )
@@ -906,41 +904,42 @@ cli::loader::main::command() {
     cli::loader::main::command::load
 
     ARG_SCOPE=CLI_SCOPE \
-        cli::core::parse "$@"
-    local CLI_META_GROUP=${REPLY}
+        cli::core::parse CLI_META "$@"
+    local CLI_META_GROUP="${REPLY}"
+    # local -n CLI_NAMED_ARGS="${REPLY_CLI_ARGS_PARSE_NAMED}"
 
     # declare locals for group
     local -A CLI_SCOPE_LAST=()
-    local -n CLI_META_GROUP_TYPE=${CLI_META_GROUP}_TYPE
-    for REPLY in ${!CLI_META_GROUP_TYPE[@]}; do
+    local -n CLI_META_GROUP_TYPE="${CLI_META_GROUP}_TYPE"
+    for REPLY in "${!CLI_META_GROUP_TYPE[@]}"; do
 
         # variable name
-        local NAME=${REPLY}
-        cli::name::to_symbol ${NAME}
+        local NAME="${REPLY}"
+        cli::name::to_symbol "${NAME}"
         local VARIABLE="ARG_${REPLY}"
 
         # variable flags
         local TYPE="${CLI_META_GROUP_TYPE[${NAME}]}"
-        cli::core::type::to_bash ${TYPE}
+        cli::core::type::to_bash "${TYPE}"
         local FLAGS="${REPLY}"
 
         # declare variable
-        local -${FLAGS} ${VARIABLE}
+        local -${FLAGS} "${VARIABLE}"
         
         # prolog
-        CLI_SCOPE_LAST[${VARIABLE}]=CLI_SCOPE[${VARIABLE}]
-        CLI_SCOPE[${VARIABLE}]="${TYPE}"
+        CLI_SCOPE_LAST["${VARIABLE}"]=CLI_SCOPE["${VARIABLE}"]
+        CLI_SCOPE["${VARIABLE}"]="${TYPE}"
 
         # initialize variable
-        if cli::set::test REPLY_CLI_PARSE_ARGS_NAMED ${NAME}; then
-            local -n VARIABLE_REF=${VARIABLE}
-            local -n VALUE_REF="REPLY_CLI_PARSE_ARGS_NAMED_${REPLY_CLI_PARSE_ARGS_NAMED[${NAME}]}"
+        if cli::set::test REPLY_CLI_ARGS_PARSE_NAMED ${NAME}; then
+            local -n VARIABLE_REF="${VARIABLE}"
+            local -n VALUE_REF="REPLY_CLI_ARGS_PARSE_NAMED_${REPLY_CLI_ARGS_PARSE_NAMED[${NAME}]}"
             case ${TYPE} in
                 'array') VARIABLE_REF=( "${VALUE_REF[@]}" ) ;;
                 'map')
                     local PAIR
                     for PAIR in "${VALUE_REF[@]}"; do
-                        VARIABLE_REF[${PAIR%%=*}]="${PAIR#*=}"
+                        VARIABLE_REF["${PAIR%%=*}"]="${PAIR#*=}"
                     done
                     ;;
                 *) VARIABLE_REF="${VALUE_REF}" ;;
@@ -948,7 +947,7 @@ cli::loader::main::command() {
         else
             # default value
             ARG_SCOPE=CLI_SCOPE \
-                cli::core::variable::initialize ${VARIABLE}
+                cli::core::variable::initialize "${VARIABLE}"
         fi
 
         # declare -p ${VARIABLE} >&2
@@ -956,13 +955,13 @@ cli::loader::main::command() {
     unset TYPE NAME VARIABLE FLAGS PAIR
     unset -n VARIABLE_REF VALUE_REF
 
-    # cli::dump 'REPLY_CLI_PARSE_ARGS_*' >&2
+    # cli::dump 'REPLY_CLI_ARGS_PARSE_*' >&2
 
-    cli::loader::main::command::dispatch "${REPLY_CLI_PARSE_ARGS_POSITIONAL[@]}"
+    cli::loader::main::command::dispatch "${REPLY_CLI_ARGS_PARSE_POSITIONAL[@]}"
 
     # epilog
-    for REPLY in ${!CLI_SCOPE_LAST[@]}; do
-        CLI_SCOPE[${REPLY}]=CLI_SCOPE_LAST[${REPLY}]
+    for REPLY in "${!CLI_SCOPE_LAST[@]}"; do
+        CLI_SCOPE["${REPLY}"]=CLI_SCOPE_LAST["${REPLY}"]
     done
 }
 

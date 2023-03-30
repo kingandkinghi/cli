@@ -19,5 +19,5 @@ cli::args::self_test() {
     cli args parse --self-test
     cli args resolve --self-test
     cli args tokenize --self-test
-    echo cli args verify --self-test
+    cli args verify --self-test
 }

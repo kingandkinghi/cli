@@ -76,9 +76,9 @@ cli::core::variable::write() {
 
         # array
         elif ${REPLY_CLI_CORE_VARIABLE_IS_ARRAY}; then
-            local VALUE
-            for VALUE in "${REF[@]}"; do
-                cli::bash::write "${PREFIX[@]}" "${VALUE}"
+            local INDEX
+            for INDEX in "${!REF[@]}"; do
+                cli::bash::write "${PREFIX[@]}" "${INDEX}" "${REF[INDEX]}"
             done
 
         # map
@@ -151,15 +151,15 @@ cli::core::variable::write::self_test() {
 
     # array
     local -a MY_ARRAY=( 'a a b a' )
-    diff <(cli core variable write -- MY_ARRAY) - <<< 'a\ a\ b\ a'
+    diff <(cli core variable write -- MY_ARRAY) - <<< '0 a\ a\ b\ a'
 
     # array
     local -a MY_ARRAY=( a a b a )
     diff <(cli core variable write -- MY_ARRAY) <(
-        echo a
-        echo a
-        echo b
-        echo a
+        echo 0 a
+        echo 1 a
+        echo 2 b
+        echo 3 a
     )
 
     # map
@@ -217,8 +217,8 @@ cli::core::variable::write::self_test() {
     )
     local -a MOD_ARRAY_0=( 'fib' 'pi' )
     diff <(cli core variable write -- MOD_ARRAY) <(
-        echo seq fib
-        echo seq pi
+        echo seq 0 fib
+        echo seq 1 pi
     )
 
     # udt

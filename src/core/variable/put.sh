@@ -98,18 +98,30 @@ cli::core::variable::put() {
         else
             ${REPLY_CLI_CORE_TYPE_IS_ARRAY} || cli::assert
 
-            # array element supplied
-            (( $# <= 1 )) || cli::assert \
-                "Failed to add value '$1' to array '${NAME}'." \
-                "Expected a record with one or no fields, but got $@: $@"
-            
-            # no elements
+            (( $# <= 2 )) || cli::assert \
+                "Failed to assign index '${1-}' value '${2-}' in array '${NAME}'." \
+                "Expected a record with two or fewer fields, but got $#: $@"
+
+            # no element
             if (( $# == 0 )); then 
                 return
             fi
 
-            local ELEMENT="$1"
-            REF+=( "${ELEMENT}" ) 
+            # appened element
+            if (( $# == 1 )); then 
+                local ELEMENT="${1-}"
+                REF+=( "${ELEMENT}" ) 
+                return
+            fi
+
+            local INDEX="$1"
+            local ELEMENT="${2-}"
+
+            [[ "${INDEX}" =~ ^[0-9]+$ ]] || cli::assert \
+                "Failed to use index '${INDEX}' to assign '${ELEMENT}' to map '${NAME}'."
+
+            # set element at index
+            REF["${INDEX}"]="${ELEMENT}"
         fi
 
         return
@@ -189,7 +201,7 @@ cli::core::variable::put::self_test() {
 
         # array
         local -a MY_ARRAY=()
-        diff <( ${CLI_COMMAND[@]} -- MY_ARRAY 'a b c' ) - \
+        diff <( ${CLI_COMMAND[@]} -- MY_ARRAY 0 'a b c' ) - \
             <<< 'declare -a MY_ARRAY=([0]="a b c")'
 
         # map
@@ -229,9 +241,10 @@ cli::core::variable::put::self_test() {
 
         # array
         local -a MY_ARRAY=()
-        diff <( ${CLI_COMMAND[@]} --- MY_ARRAY a > /dev/null
-                ${CLI_COMMAND[@]} -- MY_ARRAY b; ) - \
-            <<< 'declare -a MY_ARRAY=([0]="a" [1]="b")'
+        diff <( ${CLI_COMMAND[@]} --- MY_ARRAY 0 a > /dev/null
+                ${CLI_COMMAND[@]} -- MY_ARRAY 1 b > /dev/null
+                ${CLI_COMMAND[@]} -- MY_ARRAY c; ) - \
+            <<< 'declare -a MY_ARRAY=([0]="a" [1]="b" [2]="c")'
 
         # map
         local -A MY_MAP=()
@@ -313,8 +326,8 @@ cli::core::variable::put::self_test() {
         # array
         local -A MY_MAP_OF_ARRAY=()
         diff <( 
-            ${CLI_COMMAND[@]} --- MY_MAP_OF_ARRAY x "a b" > /dev/null
-            ${CLI_COMMAND[@]} -- MY_MAP_OF_ARRAY x c 
+            ${CLI_COMMAND[@]} --- MY_MAP_OF_ARRAY x 0 "a b" > /dev/null
+            ${CLI_COMMAND[@]} -- MY_MAP_OF_ARRAY x 1 c 
         ) <(
             echo 'declare -A MY_MAP_OF_ARRAY=([x]="0" )'
             echo 'declare -a MY_MAP_OF_ARRAY_0=([0]="a b" [1]="c")'

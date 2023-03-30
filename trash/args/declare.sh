@@ -54,24 +54,28 @@ cli::args::initialize() {
 
     # tokenize
     cli::args::tokenize "$@"
-    TOKENS=${REPLY}
+    TOKENS="${REPLY}"
 
     # parse
-    ARG_ALIAS=${ARG_META}_ALIAS \
-        cli::args::parse ${TOKENS}
-    ARGS=${REPLY}
+    ARG_ALIAS="${ARG_META}_ALIAS" \
+        cli::args::parse "${TOKENS}"
+    ARGS="${REPLY}"
 
     # resolve
-    ARG_GROUPS=${ARG_META}_GROUP \
-        cli::args::resolve ${ARGS}
-    META_GROUP=${REPLY}
+    ARG_GROUPS="${ARG_META}_GROUP" \
+        cli::args::resolve "${ARGS}"
+    local GROUP_ID="${REPLY}"
+
+    # resolve (bash name for group)
+    cli::core::variable::resolve "${CLI_META}_GROUP" "${GROUP_ID}"
+    local META_GROUP="${REPLY}"
 
     # verify
-    ARG_META_GROUP=${META_GROUP} \
-        cli::args::verify ${ARGS}
+    ARG_META_GROUP="${META_GROUP}" \
+        cli::args::verify "${ARGS}"
 
     # return group
-    REPLY=${META_GROUP}
+    REPLY="${META_GROUP}"
 }
 
 cli::args::declare::self_test() (
@@ -94,7 +98,6 @@ cli::args::declare::self_test() (
     diff <( 
         ${CLI_COMMAND[@]} -- --id 42 -f banana -h --header Foo -- a0 a1 
     ) - <<-EOF || cli::assert
-		first_named id
 		positional a0
 		positional a1
 		named fruit banana
@@ -113,7 +116,6 @@ return
         | cli args parse \
         | ${CLI_COMMAND[@]} -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named props' \
             'named props a=0' \
             'named props b=1'
 
@@ -127,7 +129,6 @@ return
         | cli args parse \
         | ${CLI_COMMAND[@]} -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named name' \
             'named name a' \
             'named name b'
 
@@ -179,7 +180,6 @@ return
         | cli args parse \
         | ${CLI_COMMAND[@]} -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named name' \
             'named name foo' 
 
     meta() {
@@ -199,7 +199,6 @@ return
         | cli args parse \
         | ${CLI_COMMAND[@]} -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named value' \
             'named value 42' 
 
     meta() {
@@ -212,7 +211,6 @@ return
         | cli args parse \
         | ${CLI_COMMAND[@]} -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named' \
             'named color black' 
 
     # override default value (e.g. --color white)
@@ -220,7 +218,6 @@ return
         | cli args parse \
         | ${CLI_COMMAND[@]} -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named color' \
             'named color white'
 
     # override default value with alias (e.g. -c white)
@@ -228,7 +225,6 @@ return
         | cli args parse -- <( echo 'c color' ) \
         | ${CLI_COMMAND[@]} -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named color' \
             'named color white'
 
     meta() {
@@ -239,15 +235,13 @@ return
     cli args tokenize \
         | cli args parse \
         | ${CLI_COMMAND[@]} -- <( meta ) \
-        | assert::pipe_records_eq \
-            'first_named'
+        | assert::pipe_records_eq
 
     # implicit boolean (e.g. '--help')
     cli args tokenize -- --help \
         | cli args parse \
         | ${CLI_COMMAND[@]} -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named help' \
             'named help'
 
     # bad allowed value (e.g. '--help bad')
@@ -267,7 +261,6 @@ return
         | cli args parse \
         | ${CLI_COMMAND[@]} -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named' \
             'positional a0' \
             'positional a1'
 )

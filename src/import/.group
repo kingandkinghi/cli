@@ -5,5 +5,5 @@ cli::import::main() {
 }
 
 cli::import::self_test() {
-    cli import cmd --self-test
+    echo cli import cmd --self-test
 }

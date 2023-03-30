@@ -76,7 +76,6 @@ cli::args::tokenize::main() {
     local TOKENS='REPLY_CLI_ARGS_TOKENS'
 
     cli::args::tokenize "$@"
-    cli::args::tokenize "$@"
     local -n TOKENS_ID=${TOKENS}_ID
     local -n TOKENS_IDENTIFIER=${TOKENS}_IDENTIFIER
 
@@ -187,8 +186,6 @@ cli::args::tokenize::self_test() {
 		VALUE a a
 		EOF 
 		EOFF
-
-return
 
     # escape
     diff <(${CLI_COMMAND[@]} -- --k 'v v' -- 'a a') - <<-EOFF

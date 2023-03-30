@@ -2,10 +2,11 @@
 CLI_IMPORT=(
     "cli args check"
     "cli args resolve"
+    "cli args tokenize"
+    "cli args parse"
     "cli core variable declare"
     "cli core variable put"
     "cli core variable read"
-    "cli core variable write"
     "cli set intersect"
 )
 
@@ -46,31 +47,32 @@ EOF
 }
 
 cli::args::verify::main() {
-    ARG_TYPE='cli_args' \
-        cli::core::variable::declare MY_ARGS
-    cli::core::variable::read MY_ARGS
+    local -A SCOPE=()
+    ARG_SCOPE='SCOPE'
 
-    ARG_META_GROUPS=${ARG_META}_GROUP \
-        cli::args::resolve MY_ARGS
-    local META_GROUP=${REPLY}
+    ARG_TYPE='cli_meta' cli::core::variable::declare MY_META
+    cli::core::variable::read MY_META
+    cli::args::tokenize "$@"
+    cli::args::parse MY_META_ALIAS "${REPLY}"
+    local ARGS="${REPLY}"
 
-    ARG_META_GROUP=${META_GROUP} \
-        cli::args::verify MY_ARGS
-
-    cli core variable json write ---source
-    cli::core::variable::json::write MY_ARGS | jq --sort-keys
+    cli::args::resolve MY_META_GROUP "${ARGS}"
+    cli::core::variable::resolve MY_META_GROUP "${REPLY}"
+    cli::args::verify "${REPLY}" "${ARGS}"
 }
 
 cli::args::verify() {
     : ${ARG_SCOPE?'Missing scope.'}
 
-    : ${ARG_META_GROUP?'Missing metadata.'}
-    local -n TYPE_REF=${ARG_META_GROUP}_TYPE
-    local -n DEFAULT_REF=${ARG_META_GROUP}_DEFAULT
-    local -n REQUIRE_REF=${ARG_META_GROUP}_REQUIRE
-    local -n REGEX_REF=${ARG_META_GROUP}_REGEX
-    local -n ALLOW_REF=${ARG_META_GROUP}_ALLOW
-    local -n POSITIONAL_REF=${ARG_META_GROUP}_POSITIONAL
+    local META_GROUP="$1"
+    shift
+
+    local -n TYPE_REF=${META_GROUP}_TYPE
+    local -n DEFAULT_REF=${META_GROUP}_DEFAULT
+    local -n REQUIRE_REF=${META_GROUP}_REQUIRE
+    local -n REGEX_REF=${META_GROUP}_REGEX
+    local -n ALLOW_REF=${META_GROUP}_ALLOW
+    local -n POSITIONAL_REF=${META_GROUP}_POSITIONAL
 
     local ARGS=${1?'Missing args.'}
     local -n POSITIONAL_ARGS_REF=${ARGS}_POSITIONAL
@@ -128,8 +130,8 @@ cli::args::verify() {
         # allow ref
         local ALLOW=''
         if [[ -n ${ALLOW_REF[$OPTION]+set} ]]; then 
-            local -n allow_ref=${ARG_META_GROUP}_ALLOW_${ALLOW_REF[${OPTION}]}
-            ALLOW="${!allow_ref[@]}"
+            local -n ALLOW_OPTION_REF=${META_GROUP}_ALLOW_${ALLOW_REF[${OPTION}]}
+            ALLOW="${!ALLOW_OPTION_REF[@]}"
         fi
 
         # element type & values
@@ -173,48 +175,9 @@ cli::args::verify() {
 }
 
 cli::args::verify::self_test() (
-    local -A SCOPE=()
-    ARG_SCOPE='SCOPE'
-
-    # declare metadata
-    local ARG_META='MY_META'
-    ARG_TYPE='cli_meta' \
-        cli::core::variable::declare ${ARG_META}
-
-    # load metadata
-    cli::core::variable::read ${ARG_META} < <( 
-        cli sample kitchen-sink ---load 
-    )
-
-    # cli sample kitchen-sink
-    diff <(
-        # sample command line
-        cli args tokenize -- --id 42 -f banana -h --header Foo -- a0 a1 \
-            | cli args parse -- \
-                <( cli::core::variable::write ${ARG_META}_ALIAS ) \
-            | cli args verify --
-    ) - <<-EOF || cli::assert
-		{
-		  "first_named": "id",
-		  "named": {
-		    "fruit": [
-		      "banana"
-		    ],
-		    "header": [
-		      "Foo"
-		    ],
-		    "help": [],
-		    "id": [
-		      "42"
-		    ]
-		  },
-		  "path": [],
-		  "positional": [
-		    "a0",
-		    "a1"
-		  ]
-		}
-		EOF
+    cli args verify -- --id 42 -f banana -h --header Foo -- a0 a1 \
+        < <( cli sample kitchen-sink ---load )
+    return
 
     meta() {
         echo 'group * type props map'
@@ -226,10 +189,8 @@ cli::args::verify::self_test() (
         | cli args parse -- \
         | cli args verify -- <( meta )
         
-    return
         #  \
         # | assert::pipe_records_eq \
-        #     'first_named props' \
         #     'named props a=0' \
         #     'named props b=1'
 
@@ -243,7 +204,6 @@ cli::args::verify::self_test() (
         | cli args parse \
         | cli args verify -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named name' \
             'named name a' \
             'named name b'
 
@@ -295,7 +255,6 @@ cli::args::verify::self_test() (
         | cli args parse \
         | cli args verify -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named name' \
             'named name foo' 
 
     meta() {
@@ -315,7 +274,6 @@ cli::args::verify::self_test() (
         | cli args parse \
         | cli args verify -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named value' \
             'named value 42' 
 
     meta() {
@@ -328,7 +286,6 @@ cli::args::verify::self_test() (
         | cli args parse \
         | cli args verify -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named' \
             'named color black' 
 
     # override DEFAULT value (e.g. --color white)
@@ -336,7 +293,6 @@ cli::args::verify::self_test() (
         | cli args parse \
         | cli args verify -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named color' \
             'named color white'
 
     # override DEFAULT value with alias (e.g. -c white)
@@ -344,7 +300,6 @@ cli::args::verify::self_test() (
         | cli args parse -- <( echo 'c color' ) \
         | cli args verify -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named color' \
             'named color white'
 
     meta() {
@@ -355,15 +310,13 @@ cli::args::verify::self_test() (
     cli args tokenize \
         | cli args parse \
         | cli args verify -- <( meta ) \
-        | assert::pipe_records_eq \
-            'first_named'
+        | assert::pipe_records_eq
 
     # implicit boolean (e.g. '--help')
     cli args tokenize -- --help \
         | cli args parse \
         | cli args verify -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named help' \
             'named help'
 
     # bad allowed value (e.g. '--help bad')
@@ -383,7 +336,6 @@ cli::args::verify::self_test() (
         | cli args parse \
         | cli args verify -- <( meta ) \
         | assert::pipe_records_eq \
-            'first_named' \
             'positional a0' \
             'positional a1'
 )

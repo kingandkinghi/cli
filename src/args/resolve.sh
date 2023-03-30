@@ -1,6 +1,8 @@
 #!/usr/bin/env CLI_TOOL=cli bash-cli-part
 CLI_IMPORT=(
     "cli args check"
+    "cli args tokenize"
+    "cli args parse"
     "cli core variable declare"
     "cli core variable put"
     "cli core variable read"
@@ -38,97 +40,59 @@ EOF
 }
 
 cli::args::resolve::main() {
-    ARG_TYPE='cli_args' \
-        cli::core::variable::declare MY_ARGS
-    cli::core::variable::read MY_ARGS
+    local -A SCOPE=()
+    ARG_SCOPE='SCOPE'
 
-    ARG_META_GROUPS=${ARG_META}_GROUP \
-        cli::args::resolve MY_ARGS
+    ARG_TYPE='cli_meta' cli::core::variable::declare MY_META
+    cli::core::variable::read MY_META
+    cli::args::tokenize "$@"
+    cli::args::parse MY_META_ALIAS "${REPLY}"
+    cli::args::resolve MY_META_GROUP "${REPLY}"
+    echo "${REPLY}"
 }
 
 cli::args::resolve() {
-    [[ ${ARG_SCOPE:-} ]] || cli::assert 'Missing scope.'
-    [[ ${ARG_META_GROUPS:-} ]] || cli::assert 'Missing metadata.'
+    [[ "${ARG_SCOPE:-}" ]] || cli::assert 'Missing scope.'
 
-    local ARGS=${1-}
-    [[ ${ARGS} ]] || cli::assert 'Missing args.'
+    local META_GROUP="$1"
+    shift
 
-    local -n GROUP_REF=${ARG_META_GROUPS}
+    local ARGS="$1"
+    shift
 
-    local GROUP_ID='*'
-    if (( ${#GROUP_REF[@]} > 1 )); then
-        cli::set::intersect ${ARG_META_GROUPS} ${ARGS}_NAMED
-        
-        (( ${#REPLY_MAP[@]} == 1 )) \
-            || cli::assert \
-                "Expected a single named argument from the set { ${!GROUP_REF[@]} }" \
-                "be declared to discriminate the command group." \
-                "Instead '${REPLY_MAP[@]}' discrimiator(s) were declared."
+    local -n GROUP_REF="${META_GROUP}"
 
-        GROUP_ID="${!REPLY_MAP[@]}" 
+    if (( ${#GROUP_REF[@]} == 1 )); then
+        REPLY='*'
+        return
     fi
 
-    cli::core::variable::resolve ${ARG_META_GROUPS} "${GROUP_ID}"
+    cli::set::intersect "${META_GROUP}" "${ARGS}_NAMED"
+    
+    (( ${#REPLY_MAP[@]} == 1 )) \
+        || cli::assert \
+            "Expected a single named argument from the set { ${!GROUP_REF[@]} }" \
+            "be declared to discriminate the command group." \
+            "Instead '${REPLY_MAP[@]}' discrimiator(s) were declared."
+
+    REPLY="${!REPLY_MAP[@]}"
+    # cli::core::variable::resolve "${META_GROUP}" "${GROUP_ID}"
 }
 
-cli::args::resolve::self_test() (
+cli::args::resolve::self_test() {
 
-    # cli sample kitchen-sink
-    (
-        local -A SCOPE=()
-        ARG_SCOPE='SCOPE'
+    diff <(
+        cli args resolve -- --id 42 -f banana -h --header Foo -- a0 a1 \
+            < <( cli sample kitchen-sink ---load )
+    ) - <<< 'id'
 
-        # declare metadata
-        local ARG_META='MY_META'
-        ARG_TYPE='cli_meta' \
-            cli::core::variable::declare ${ARG_META}
+    diff <(
+        cli args resolve -- --name foo -f banana -h --header Foo -- a0 a1 \
+            < <( cli sample kitchen-sink ---load )
+    ) - <<< 'name'
 
-        # load metadata
-        cli::core::variable::read ${ARG_META} < <( 
-            cli sample kitchen-sink ---load 
-        )
-
-        diff <(
-            # sample command line
-            local COMMAND_LINE='--id 42 -f banana -h --header Foo -- a0 a1'
-            cli args tokenize -- ${COMMAND_LINE} \
-                | cli args parse -- \
-                    <( cli::core::variable::write ${ARG_META}_ALIAS ) \
-                | ${CLI_COMMAND[@]} ---reply
-        ) - <<< 'MY_META_GROUP_0'
-
-        diff <(
-            # sample command line
-            local COMMAND_LINE='--name foo -f banana -h --header Foo -- a0 a1'
-            cli args tokenize -- ${COMMAND_LINE} \
-                | cli args parse -- \
-                    <( cli::core::variable::write ${ARG_META}_ALIAS ) \
-                | ${CLI_COMMAND[@]} ---reply
-        ) - <<< 'MY_META_GROUP_1'
-    )
-
-    # cli sample simple
-    (
-        local -A SCOPE=()
-        ARG_SCOPE='SCOPE'
-
-        # declare metadata
-        local ARG_META='MY_META'
-        ARG_TYPE='cli_meta' \
-            cli::core::variable::declare ${ARG_META}
-
-        # load metadata
-        cli::core::variable::read ${ARG_META} < <( 
-            cli sample simple ---load 
-        )
-
-        diff <(
-            # sample command line
-            local COMMAND_LINE='-f banana -h --header Foo -- a0 a1'
-            cli args tokenize -- ${COMMAND_LINE} \
-                | cli args parse -- \
-                    <( cli::core::variable::write ${ARG_META}_ALIAS ) \
-                | ${CLI_COMMAND[@]} ---reply
-        ) - <<< 'MY_META_GROUP_0'
-    )
-)
+    diff <(
+        cli args resolve -- -f banana -h --header Foo -- a0 a1 \
+            < <( cli sample simple ---load )
+    ) - <<< '*'
+}
