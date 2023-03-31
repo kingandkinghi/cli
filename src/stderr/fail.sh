@@ -1,6 +1,8 @@
 #!/usr/bin/env CLI_TOOL=cli bash-cli-part
 CLI_IMPORT=(
     "cli stderr dump"
+    "cli temp file"
+    "cli stderr message"
 )
 
 cli::stderr::fail::help() {
@@ -22,9 +24,6 @@ cli::stderr::fail() {
 }
 
 cli::stderr::fail::self_test() (
-    cli temp file ---source
-    cli stderr message ---source
-
     set -m
 
     cli::temp::file

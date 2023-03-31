@@ -2,6 +2,7 @@
 CLI_IMPORT=(
     "cli core variable declare"
     "cli core variable unset"
+    "cli stderr test"
 )
 
 cli::args::tokenize::help() {
@@ -223,16 +224,12 @@ cli::args::tokenize::self_test() {
 		EOF 
 		EOFF
 
-return
-    assert::fails "${CLI_COMMAND[@]} -- -!" \
-        "Unexpected option \"-!\" does not match regex ^-([a-z]+)$" \
-        "passed to command \"cli args tokenize\"."
+    cli::stderr::test 'cli args tokenize -- -\!' \
+        'Unexpected option "-!" does not match regex ^-([a-z]+)$ passed to command "cli args tokenize".'
 
-    assert::fails "${CLI_COMMAND[@]} -- --!" \
-        "Unexpected option \"--!\" does not match regex ^--([a-z][a-z0-9-]*)$" \
-        "passed to command \"cli args tokenize\"."
-
-    assert::fails "${CLI_COMMAND[@]} -- ---!" \
-        "Unexpected option \"---!\" does not match regex ^---([a-z][a-z0-9-]*)$" \
-        "passed to command \"cli args tokenize\"."
+    cli::stderr::test 'cli args tokenize -- --\!' \
+		'Unexpected option "--!" does not match regex ^--([a-z][a-z0-9-]*)$ passed to command "cli args tokenize".'
+        
+    cli::stderr::test 'cli args tokenize -- ---\!' \
+		'Unexpected option "---!" does not match regex ^---([a-z][a-z0-9-]*)$ passed to command "cli args tokenize".'
 }
