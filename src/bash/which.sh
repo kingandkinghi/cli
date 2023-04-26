@@ -34,6 +34,7 @@ cli::bash::which() {
 
     local IFS=:
     local -a DIRS=( ${PATH} )
+    IFS="${CLI_IFS}"
 
     for dir in "${DIRS[@]}"; do
         local PROBE="${dir}/${NAME}"

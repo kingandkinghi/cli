@@ -1,4 +1,8 @@
 #!/usr/bin/env CLI_TOOL=cli bash-cli-part
+CLI_IMPORT=(
+    "cli stderr fail"
+)
+
 cli::args::check::help() {
     cat << EOF
 Command
