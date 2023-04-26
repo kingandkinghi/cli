@@ -1,8 +1,8 @@
+#!/usr/bin/env CLI_TOOL=cli bash-cli-part
 
 CLI_IMPORT=(
     "cli path get-info"
 )
-#!/usr/bin/env CLI_TOOL=cli bash-cli-part
 
 cli::bash::which::help() {
     cat << EOF
@@ -34,6 +34,7 @@ cli::bash::which() {
 
     local IFS=:
     local -a DIRS=( ${PATH} )
+    IFS="${CLI_IFS}"
 
     for dir in "${DIRS[@]}"; do
         local PROBE="${dir}/${NAME}"
