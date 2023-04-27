@@ -1119,9 +1119,13 @@ cli::loader::self_test() (
 )
 
 cli::loader::main::imports() {
-    # harvest imported inline functions. Imported functions are named so cli::foo_bar
-    # becomes cli::intrinsic::foo_bar. Print the imports. For example, a call to 
-    # cli::intrinsic::foo_bar would be printed as "cli foo-bar".
+    # Harvest imported inline functions. 
+    
+    # This file contains callsites like cli::intrinsic::shim::source the implementation
+    # for which lives at cli::shim::source at has import "cli shim source". Print all
+    # such callsites so we may import them, rename them, and gather them into 
+    # loader.intrinsic.sh, and source that file into to the loader in order that 
+    # the loader avoids having to load its own dependencies.
 
     declare -F \
         | egrep 'cli::' \
@@ -1164,7 +1168,7 @@ cli::loader::main::shim() {
         local -a DEPENDENCY=( "${LOADER_IMPORTS[@]}" )
         local -a INTRINSIC_FUNCTIONS=()
         
-        # source transitive set of dependencies (prune "cli core")
+        # source transitive set of dependencies
         local -i INDEX=0
         while (( INDEX<${#DEPENDENCY[@]} )); do        
             local COMMAND="${DEPENDENCY[${INDEX}]}"
@@ -1172,7 +1176,7 @@ cli::loader::main::shim() {
             # echo "> ${COMMAND} ${INDEX}" >&2
 
             if [[ "${COMMAND}" =~ 'cli core' ]]; then
-                # echo "skip ${COMMAND}" >/dev/stderr
+                echo "ASSERT FAILED: Command '${COMMAND}' found." >/dev/stderr
                 continue
             fi
 
