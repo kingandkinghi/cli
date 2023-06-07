@@ -30,11 +30,23 @@ cli::core::type::to_bash() {
 }
 
 cli::core::type::to_bash::self_test() {
-    diff <( ${CLI_COMMAND[@]} ---reply string ) - <<< ''
-    diff <( ${CLI_COMMAND[@]} ---reply integer ) - <<< 'i'
-    diff <( ${CLI_COMMAND[@]} ---reply boolean ) - <<< ''
-    diff <( ${CLI_COMMAND[@]} ---reply array ) - <<< 'a'
-    diff <( ${CLI_COMMAND[@]} ---reply map_of array ) - <<< 'A'
-    diff <( ${CLI_COMMAND[@]} ---reply map ) - <<< 'A'
-    ! ${CLI_COMMAND[@]} --- udt || cli::assert
+    cli::core::type::to_bash string
+    [[ "${REPLY}" == '' ]]
+
+    cli::core::type::to_bash integer
+    [[ "${REPLY}" == 'i' ]]
+
+    cli::core::type::to_bash boolean
+    [[ "${REPLY}" == '' ]]
+
+    cli::core::type::to_bash array
+    [[ "${REPLY}" == 'a' ]]
+
+    cli::core::type::to_bash map
+    [[ "${REPLY}" == 'A' ]]
+
+    cli::core::type::to_bash map_of array
+    [[ "${REPLY}" == 'A' ]]
+
+    ! cli::core::type::to_bash udt
 }

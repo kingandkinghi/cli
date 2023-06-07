@@ -1,4 +1,7 @@
 #!/usr/bin/env CLI_TOOL=cli bash-cli-part
+CLI_IMPORT=(
+    "cli core type unmodify"
+)
 
 cli::core::type::get_info::help() {
     cat << EOF | cli::core::type::help
@@ -57,6 +60,8 @@ cli::core::type::get_info() {
     # modified
     while [[ "${MAPFILE}" == 'map_of' ]]; do
         REPLY_CLI_CORE_TYPE_IS_MODIFIED=true
+        cli::core::type::unmodify "$@"
+        REPLY="${REPLY_CLI_CORE_TYPE}"
         return
     done
 
@@ -94,43 +99,116 @@ cli::core::type::get_info() {
 }
 
 cli::core::type::get_info::self_test() {
-    cli::assert::eval() { eval "$@" || cli::assert; }
 
-    test() {
-        local -i EXPECTED=$#
-        for p in "$@"; do
-            cli::assert::eval "\${REPLY_CLI_CORE_TYPE_IS_${p}}"
-        done
+    cli::core::type::get_info udt
+    [[ "${REPLY}" == 'udt' ]]
+    [[ "${REPLY_CLI_CORE_TYPE}" == 'udt' ]]
+    [[ "${MAPFILE[*]}" == 'udt' ]]
+    ! $REPLY_CLI_CORE_TYPE_IS_INTEGER
+    ! $REPLY_CLI_CORE_TYPE_IS_BOOLEAN
+    ! $REPLY_CLI_CORE_TYPE_IS_STRING
+    ! $REPLY_CLI_CORE_TYPE_IS_SCALER
+    ! $REPLY_CLI_CORE_TYPE_IS_ARRAY
+    ! $REPLY_CLI_CORE_TYPE_IS_MAP
+    ! $REPLY_CLI_CORE_TYPE_IS_BUILTIN
+    ! $REPLY_CLI_CORE_TYPE_IS_MODIFIED
+    $REPLY_CLI_CORE_TYPE_IS_USER_DEFINED
 
-        local -i ACTUAL=0
-        if ${REPLY_CLI_CORE_TYPE_IS_INTEGER}; then ACTUAL+=1; fi
-        if ${REPLY_CLI_CORE_TYPE_IS_BOOLEAN}; then ACTUAL+=1; fi
-        if ${REPLY_CLI_CORE_TYPE_IS_STRING}; then ACTUAL+=1; fi 
-        if ${REPLY_CLI_CORE_TYPE_IS_SCALER}; then ACTUAL+=1; fi 
-        if ${REPLY_CLI_CORE_TYPE_IS_ARRAY}; then ACTUAL+=1; fi 
-        if ${REPLY_CLI_CORE_TYPE_IS_MAP}; then ACTUAL+=1; fi 
-        if ${REPLY_CLI_CORE_TYPE_IS_BUILTIN}; then ACTUAL+=1; fi 
-        if ${REPLY_CLI_CORE_TYPE_IS_MODIFIED}; then ACTUAL+=1; fi 
-        if ${REPLY_CLI_CORE_TYPE_IS_USER_DEFINED}; then ACTUAL+=1; fi 
+    cli::core::type::get_info string
+    [[ "${REPLY}" == 'string' ]]
+    [[ "${REPLY_CLI_CORE_TYPE}" == 'string' ]]
+    [[ "${MAPFILE[*]}" == 'string' ]]
+    ! $REPLY_CLI_CORE_TYPE_IS_INTEGER
+    ! $REPLY_CLI_CORE_TYPE_IS_BOOLEAN
+    $REPLY_CLI_CORE_TYPE_IS_STRING
+    $REPLY_CLI_CORE_TYPE_IS_SCALER
+    ! $REPLY_CLI_CORE_TYPE_IS_ARRAY
+    ! $REPLY_CLI_CORE_TYPE_IS_MAP
+    $REPLY_CLI_CORE_TYPE_IS_BUILTIN
+    ! $REPLY_CLI_CORE_TYPE_IS_MODIFIED
+    ! $REPLY_CLI_CORE_TYPE_IS_USER_DEFINED
 
-        [[ "${REPLY}" == "${MAPFILE[*]}" ]] || cli::assert
-        [[ "${REPLY}" ]] || cli::assert
+    cli::core::type::get_info boolean
+    [[ "${REPLY}" == 'boolean' ]]
+    [[ "${REPLY_CLI_CORE_TYPE}" == 'boolean' ]]
+    [[ "${MAPFILE[*]}" == 'boolean' ]]
+    ! $REPLY_CLI_CORE_TYPE_IS_INTEGER
+    $REPLY_CLI_CORE_TYPE_IS_BOOLEAN
+    ! $REPLY_CLI_CORE_TYPE_IS_STRING
+    $REPLY_CLI_CORE_TYPE_IS_SCALER
+    ! $REPLY_CLI_CORE_TYPE_IS_ARRAY
+    ! $REPLY_CLI_CORE_TYPE_IS_MAP
+    $REPLY_CLI_CORE_TYPE_IS_BUILTIN
+    ! $REPLY_CLI_CORE_TYPE_IS_MODIFIED
+    ! $REPLY_CLI_CORE_TYPE_IS_USER_DEFINED
 
-        (( ${#MAPFILE[@]} > 0 )) || cli::assert
-        if ! (( ACTUAL == EXPECTED )); then
-            cli::dump 'REPLY_CLI_CORE_TYPE_IS_*' >&2
-            cli::assert "actual ${ACTUAL} != expected ${EXPECTED}"
-        fi
-    }
+    cli::core::type::get_info integer
+    [[ "${REPLY}" == 'integer' ]]
+    [[ "${REPLY_CLI_CORE_TYPE}" == 'integer' ]]
+    [[ "${MAPFILE[*]}" == 'integer' ]]
+    $REPLY_CLI_CORE_TYPE_IS_INTEGER
+    ! $REPLY_CLI_CORE_TYPE_IS_BOOLEAN
+    ! $REPLY_CLI_CORE_TYPE_IS_STRING
+    $REPLY_CLI_CORE_TYPE_IS_SCALER
+    ! $REPLY_CLI_CORE_TYPE_IS_ARRAY
+    ! $REPLY_CLI_CORE_TYPE_IS_MAP
+    $REPLY_CLI_CORE_TYPE_IS_BUILTIN
+    ! $REPLY_CLI_CORE_TYPE_IS_MODIFIED
+    ! $REPLY_CLI_CORE_TYPE_IS_USER_DEFINED
 
-    diff <( ${CLI_COMMAND[@]} ---reply udt; test USER_DEFINED ) - <<< 'udt'
-    diff <( ${CLI_COMMAND[@]} ---reply string; test STRING SCALER BUILTIN ) - <<< 'string'
-    diff <( ${CLI_COMMAND[@]} ---reply boolean; test BOOLEAN SCALER BUILTIN ) - <<< 'boolean'
-    diff <( ${CLI_COMMAND[@]} ---reply integer; test INTEGER SCALER BUILTIN ) - <<< 'integer'
-    diff <( ${CLI_COMMAND[@]} ---reply map; test MAP BUILTIN ) - <<< 'map'
-    diff <( ${CLI_COMMAND[@]} ---reply array; test ARRAY BUILTIN ) - <<< 'array'
-    diff <( ${CLI_COMMAND[@]} ---reply map_of udt; test MODIFIED ) - <<< 'map_of udt'
-    
-    diff <( ${CLI_COMMAND[@]} ---mapfile map_of udt ) - <<< $'map_of\nudt'
-    diff <( ${CLI_COMMAND[@]} ---mapfile map_of map_of udt ) - <<< $'map_of\nmap_of\nudt'
+    cli::core::type::get_info map
+    [[ "${REPLY}" == 'map' ]]
+    [[ "${REPLY_CLI_CORE_TYPE}" == 'map' ]]
+    [[ "${MAPFILE[*]}" == 'map' ]]
+    ! $REPLY_CLI_CORE_TYPE_IS_INTEGER
+    ! $REPLY_CLI_CORE_TYPE_IS_BOOLEAN
+    ! $REPLY_CLI_CORE_TYPE_IS_STRING
+    ! $REPLY_CLI_CORE_TYPE_IS_SCALER
+    ! $REPLY_CLI_CORE_TYPE_IS_ARRAY
+    $REPLY_CLI_CORE_TYPE_IS_MAP
+    $REPLY_CLI_CORE_TYPE_IS_BUILTIN
+    ! $REPLY_CLI_CORE_TYPE_IS_MODIFIED
+    ! $REPLY_CLI_CORE_TYPE_IS_USER_DEFINED
+
+    cli::core::type::get_info array
+    [[ "${REPLY}" == 'array' ]]
+    [[ "${REPLY_CLI_CORE_TYPE}" == 'array' ]]
+    [[ "${MAPFILE[*]}" == 'array' ]]
+    ! $REPLY_CLI_CORE_TYPE_IS_INTEGER
+    ! $REPLY_CLI_CORE_TYPE_IS_BOOLEAN
+    ! $REPLY_CLI_CORE_TYPE_IS_STRING
+    ! $REPLY_CLI_CORE_TYPE_IS_SCALER
+    $REPLY_CLI_CORE_TYPE_IS_ARRAY
+    ! $REPLY_CLI_CORE_TYPE_IS_MAP
+    $REPLY_CLI_CORE_TYPE_IS_BUILTIN
+    ! $REPLY_CLI_CORE_TYPE_IS_MODIFIED
+    ! $REPLY_CLI_CORE_TYPE_IS_USER_DEFINED
+
+    cli::core::type::get_info map_of udt
+    [[ "${REPLY}" == 'map_of udt' ]]
+    [[ "${REPLY_CLI_CORE_TYPE}" == 'map_of udt' ]]
+    [[ "${MAPFILE[*]}" == 'udt' ]]
+    ! $REPLY_CLI_CORE_TYPE_IS_INTEGER
+    ! $REPLY_CLI_CORE_TYPE_IS_BOOLEAN
+    ! $REPLY_CLI_CORE_TYPE_IS_STRING
+    ! $REPLY_CLI_CORE_TYPE_IS_SCALER
+    ! $REPLY_CLI_CORE_TYPE_IS_ARRAY
+    ! $REPLY_CLI_CORE_TYPE_IS_MAP
+    ! $REPLY_CLI_CORE_TYPE_IS_BUILTIN
+    $REPLY_CLI_CORE_TYPE_IS_MODIFIED
+    ! $REPLY_CLI_CORE_TYPE_IS_USER_DEFINED
+
+    cli::core::type::get_info map_of map_of udt
+    [[ "${REPLY}" == 'map_of map_of udt' ]]
+    [[ "${REPLY_CLI_CORE_TYPE}" == 'map_of map_of udt' ]]
+    [[ "${MAPFILE[*]}" == 'map_of udt' ]]
+    ! $REPLY_CLI_CORE_TYPE_IS_INTEGER
+    ! $REPLY_CLI_CORE_TYPE_IS_BOOLEAN
+    ! $REPLY_CLI_CORE_TYPE_IS_STRING
+    ! $REPLY_CLI_CORE_TYPE_IS_SCALER
+    ! $REPLY_CLI_CORE_TYPE_IS_ARRAY
+    ! $REPLY_CLI_CORE_TYPE_IS_MAP
+    ! $REPLY_CLI_CORE_TYPE_IS_BUILTIN
+    $REPLY_CLI_CORE_TYPE_IS_MODIFIED
+    ! $REPLY_CLI_CORE_TYPE_IS_USER_DEFINED
 }

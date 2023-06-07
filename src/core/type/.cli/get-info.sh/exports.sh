@@ -1,3 +1,4 @@
+cli::source cli core type unmodify
 cli::core::type::get_info () 
 { 
     MAPFILE=("$@");
@@ -17,6 +18,8 @@ cli::core::type::get_info ()
     REPLY_CLI_CORE_TYPE_IS_USER_DEFINED=false;
     while [[ "${MAPFILE}" == 'map_of' ]]; do
         REPLY_CLI_CORE_TYPE_IS_MODIFIED=true;
+        cli::core::type::unmodify "$@";
+        REPLY="${REPLY_CLI_CORE_TYPE}";
         return;
     done;
     while true; do

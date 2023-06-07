@@ -33,23 +33,16 @@ EOF
 }
 
 cli::core::variable::get_info() {
-    local NAME="${1-}"
+    local NAME="${1:-}"
     [[ "${NAME}" ]] || cli::assert 'Missing variable name.'
-    [[ "${NAME}" =~ ${CLI_REGEX_GLOBAL_NAME} ]] \
-        || cli::assert "Bad variable name '${NAME}'."
+    [[ "${NAME}" =~ ${CLI_REGEX_GLOBAL_NAME} ]] || cli::assert "Bad variable name '${NAME}'."
 
-    local SCOPE_NAME="${ARG_SCOPE}"
-    [[ "${SCOPE_NAME}" ]] || cli::assert 'Missing scope.'
-
-    local -n SCOPE_REF="${SCOPE_NAME}"
-    if [[ ! "${SCOPE_REF["${NAME}"]+set}" == 'set' ]]; then
+    local -n TYPE_REF="${NAME}__CLI_TYPE"
+    if [[ ! -v TYPE_REF ]]; then
         return 1
     fi
 
-    local TYPE="${SCOPE_REF["${NAME}"]}"
-    [[ ${TYPE} ]] || cli::assert
-
-    cli::core::type::get_info ${TYPE}
+    cli::core::type::get_info ${TYPE_REF}
     REPLY_CLI_CORE_VARIABLE_IS_INTEGER=${REPLY_CLI_CORE_TYPE_IS_INTEGER}
     REPLY_CLI_CORE_VARIABLE_IS_BOOLEAN=${REPLY_CLI_CORE_TYPE_IS_BOOLEAN}
     REPLY_CLI_CORE_VARIABLE_IS_STRING=${REPLY_CLI_CORE_TYPE_IS_STRING}
@@ -62,58 +55,115 @@ cli::core::variable::get_info() {
 }
 
 cli::core::variable::get_info::self_test() {
-    cli::assert::eval() { eval "$@" || cli::assert; }
+    MY_UDT__CLI_TYPE=udt
+    cli::core::variable::get_info MY_UDT
+    [[ "${REPLY}" == 'udt' ]]
+    [[ "${MAPFILE[*]}" == 'udt' ]]
+    ! $REPLY_CLI_CORE_VARIABLE_IS_INTEGER
+    ! $REPLY_CLI_CORE_VARIABLE_IS_BOOLEAN
+    ! $REPLY_CLI_CORE_VARIABLE_IS_STRING
+    ! $REPLY_CLI_CORE_VARIABLE_IS_SCALER
+    ! $REPLY_CLI_CORE_VARIABLE_IS_ARRAY
+    ! $REPLY_CLI_CORE_VARIABLE_IS_MAP
+    ! $REPLY_CLI_CORE_VARIABLE_IS_BUILTIN
+    ! $REPLY_CLI_CORE_VARIABLE_IS_MODIFIED
+    $REPLY_CLI_CORE_VARIABLE_IS_USER_DEFINED
 
-    test_flags() {
-        local -i EXPECTED_TRUE=$#
+    MY_STRING__CLI_TYPE=string
+    cli::core::variable::get_info MY_STRING
+    [[ "${REPLY}" == 'string' ]]
+    [[ "${MAPFILE[*]}" == 'string' ]]
+    ! $REPLY_CLI_CORE_VARIABLE_IS_INTEGER
+    ! $REPLY_CLI_CORE_VARIABLE_IS_BOOLEAN
+    $REPLY_CLI_CORE_VARIABLE_IS_STRING
+    $REPLY_CLI_CORE_VARIABLE_IS_SCALER
+    ! $REPLY_CLI_CORE_VARIABLE_IS_ARRAY
+    ! $REPLY_CLI_CORE_VARIABLE_IS_MAP
+    $REPLY_CLI_CORE_VARIABLE_IS_BUILTIN
+    ! $REPLY_CLI_CORE_VARIABLE_IS_MODIFIED
+    ! $REPLY_CLI_CORE_VARIABLE_IS_USER_DEFINED
 
-        for p in "$@"; do
-            cli::assert::eval "\${REPLY_CLI_CORE_VARIABLE_IS_${p}}"
-        done
+    MY_BOOLEAN__CLI_TYPE=boolean
+    cli::core::variable::get_info MY_BOOLEAN
+    [[ "${REPLY}" == 'boolean' ]]
+    [[ "${MAPFILE[*]}" == 'boolean' ]]
+    ! $REPLY_CLI_CORE_VARIABLE_IS_INTEGER
+    $REPLY_CLI_CORE_VARIABLE_IS_BOOLEAN
+    ! $REPLY_CLI_CORE_VARIABLE_IS_STRING
+    $REPLY_CLI_CORE_VARIABLE_IS_SCALER
+    ! $REPLY_CLI_CORE_VARIABLE_IS_ARRAY
+    ! $REPLY_CLI_CORE_VARIABLE_IS_MAP
+    $REPLY_CLI_CORE_VARIABLE_IS_BUILTIN
+    ! $REPLY_CLI_CORE_VARIABLE_IS_MODIFIED
+    ! $REPLY_CLI_CORE_VARIABLE_IS_USER_DEFINED
 
-        local -i ACTUAL_TRUE=0
-        if ${REPLY_CLI_CORE_VARIABLE_IS_INTEGER}; then ACTUAL_TRUE+=1; fi
-        if ${REPLY_CLI_CORE_VARIABLE_IS_STRING}; then ACTUAL_TRUE+=1; fi 
-        if ${REPLY_CLI_CORE_VARIABLE_IS_BOOLEAN}; then ACTUAL_TRUE+=1; fi 
-        if ${REPLY_CLI_CORE_VARIABLE_IS_SCALER}; then ACTUAL_TRUE+=1; fi 
-        if ${REPLY_CLI_CORE_VARIABLE_IS_ARRAY}; then ACTUAL_TRUE+=1; fi 
-        if ${REPLY_CLI_CORE_VARIABLE_IS_MAP}; then ACTUAL_TRUE+=1; fi 
-        if ${REPLY_CLI_CORE_VARIABLE_IS_BUILTIN}; then ACTUAL_TRUE+=1; fi
-        if ${REPLY_CLI_CORE_VARIABLE_IS_MODIFIED}; then ACTUAL_TRUE+=1; fi
-        if ${REPLY_CLI_CORE_VARIABLE_IS_USER_DEFINED}; then ACTUAL_TRUE+=1; fi
+    MY_INTEGER__CLI_TYPE=integer
+    cli::core::variable::get_info MY_INTEGER
+    [[ "${REPLY}" == 'integer' ]]
+    [[ "${MAPFILE[*]}" == 'integer' ]]
+    $REPLY_CLI_CORE_VARIABLE_IS_INTEGER
+    ! $REPLY_CLI_CORE_VARIABLE_IS_BOOLEAN
+    ! $REPLY_CLI_CORE_VARIABLE_IS_STRING
+    $REPLY_CLI_CORE_VARIABLE_IS_SCALER
+    ! $REPLY_CLI_CORE_VARIABLE_IS_ARRAY
+    ! $REPLY_CLI_CORE_VARIABLE_IS_MAP
+    $REPLY_CLI_CORE_VARIABLE_IS_BUILTIN
+    ! $REPLY_CLI_CORE_VARIABLE_IS_MODIFIED
+    ! $REPLY_CLI_CORE_VARIABLE_IS_USER_DEFINED
 
-        if ! (( ACTUAL_TRUE == EXPECTED_TRUE )); then
-            cli::dump 'REPLY_CLI_CORE_VARIABLE_IS_*' >&2
-            cli::assert "${ACTUAL_TRUE} != ${EXPECTED_TRUE}"
-        fi
-    }
+    MY_MAP__CLI_TYPE=map
+    cli::core::variable::get_info MY_MAP
+    [[ "${REPLY}" == 'map' ]]
+    [[ "${MAPFILE[*]}" == 'map' ]]
+    ! $REPLY_CLI_CORE_VARIABLE_IS_INTEGER
+    ! $REPLY_CLI_CORE_VARIABLE_IS_BOOLEAN
+    ! $REPLY_CLI_CORE_VARIABLE_IS_STRING
+    ! $REPLY_CLI_CORE_VARIABLE_IS_SCALER
+    ! $REPLY_CLI_CORE_VARIABLE_IS_ARRAY
+    $REPLY_CLI_CORE_VARIABLE_IS_MAP
+    $REPLY_CLI_CORE_VARIABLE_IS_BUILTIN
+    ! $REPLY_CLI_CORE_VARIABLE_IS_MODIFIED
+    ! $REPLY_CLI_CORE_VARIABLE_IS_USER_DEFINED
 
-    test() {
-        local EXPECTED=$1
-        shift
+    MY_ARRAY__CLI_TYPE=array
+    cli::core::variable::get_info MY_ARRAY
+    [[ "${REPLY}" == 'array' ]]
+    [[ "${MAPFILE[*]}" == 'array' ]]
+    ! $REPLY_CLI_CORE_VARIABLE_IS_INTEGER
+    ! $REPLY_CLI_CORE_VARIABLE_IS_BOOLEAN
+    ! $REPLY_CLI_CORE_VARIABLE_IS_STRING
+    ! $REPLY_CLI_CORE_VARIABLE_IS_SCALER
+    $REPLY_CLI_CORE_VARIABLE_IS_ARRAY
+    ! $REPLY_CLI_CORE_VARIABLE_IS_MAP
+    $REPLY_CLI_CORE_VARIABLE_IS_BUILTIN
+    ! $REPLY_CLI_CORE_VARIABLE_IS_MODIFIED
+    ! $REPLY_CLI_CORE_VARIABLE_IS_USER_DEFINED
 
-        local NAME=$1
-        shift
+    MY_MAP_OF_UDT__CLI_TYPE="map_of udt"
+    cli::core::variable::get_info MY_MAP_OF_UDT
+    [[ "${REPLY}" == 'map_of udt' ]]
+    [[ "${MAPFILE[*]}" == 'udt' ]]
+    ! $REPLY_CLI_CORE_VARIABLE_IS_INTEGER
+    ! $REPLY_CLI_CORE_VARIABLE_IS_BOOLEAN
+    ! $REPLY_CLI_CORE_VARIABLE_IS_STRING
+    ! $REPLY_CLI_CORE_VARIABLE_IS_SCALER
+    ! $REPLY_CLI_CORE_VARIABLE_IS_ARRAY
+    ! $REPLY_CLI_CORE_VARIABLE_IS_MAP
+    ! $REPLY_CLI_CORE_VARIABLE_IS_BUILTIN
+    $REPLY_CLI_CORE_VARIABLE_IS_MODIFIED
+    ! $REPLY_CLI_CORE_VARIABLE_IS_USER_DEFINED
 
-        ${CLI_COMMAND[@]} --- ${NAME}
-        # declare -p MAPFILE >&2
-        # TODO MAPFILE should contain modified type not unmodified type
-        [[ "${EXPECTED}" == "${REPLY}" ]] \
-            || cli::assert "For '${NAME}', expected != actual; '${EXPECTED}' != '${REPLY}'"
-        
-        test_flags "$@"
-    }
-
-    local -A SCOPE=()
-    local ARG_SCOPE='SCOPE'
-
-    ! ${CLI_COMMAND[@]} -- VAR || cli::assert
-
-    SCOPE['MY_STRING']='string'; test string MY_STRING STRING SCALER BUILTIN
-    SCOPE['MY_BOOLEAN']='boolean'; test boolean MY_BOOLEAN BOOLEAN SCALER BUILTIN
-    SCOPE['MY_INTEGER']='integer'; test integer MY_INTEGER INTEGER SCALER BUILTIN
-    SCOPE['MY_ARRAY']='array'; test array MY_ARRAY ARRAY BUILTIN
-    SCOPE['MY_MAP']='map'; test map MY_MAP MAP BUILTIN
-    SCOPE['MY_UDT']='udt'; test udt MY_UDT USER_DEFINED
-    SCOPE['MY_MODIFIED']='map_of string'; test 'map_of string' MY_MODIFIED MODIFIED
+    MY_MAP_OF_MAP_OF_UDT__CLI_TYPE="map_of map_of udt"
+    cli::core::variable::get_info MY_MAP_OF_MAP_OF_UDT
+    [[ "${REPLY}" == 'map_of map_of udt' ]]
+    [[ "${MAPFILE[*]}" == 'map_of udt' ]]
+    ! $REPLY_CLI_CORE_VARIABLE_IS_INTEGER
+    ! $REPLY_CLI_CORE_VARIABLE_IS_BOOLEAN
+    ! $REPLY_CLI_CORE_VARIABLE_IS_STRING
+    ! $REPLY_CLI_CORE_VARIABLE_IS_SCALER
+    ! $REPLY_CLI_CORE_VARIABLE_IS_ARRAY
+    ! $REPLY_CLI_CORE_VARIABLE_IS_MAP
+    ! $REPLY_CLI_CORE_VARIABLE_IS_BUILTIN
+    $REPLY_CLI_CORE_VARIABLE_IS_MODIFIED
+    ! $REPLY_CLI_CORE_VARIABLE_IS_USER_DEFINED
 }

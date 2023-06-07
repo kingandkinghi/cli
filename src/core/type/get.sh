@@ -36,5 +36,7 @@ cli::core::type::get::self_test() {
         [major]='integer'
         [minor]='integer'
     )
-    diff <( ${CLI_COMMAND[@]} ---reply version ) - <<< 'CLI_TYPE_VERSION'
+
+    cli::core::type::get version
+    [[ "${REPLY}" == 'CLI_TYPE_VERSION' ]] || cli::assert
 }

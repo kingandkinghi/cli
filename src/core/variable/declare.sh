@@ -4,6 +4,7 @@ CLI_IMPORT=(
     "cli core type get"
     "cli core type get-info"
     "cli core type to-bash"
+    "cli core variable layout"
     "cli core variable parse"
     "cli core variable get-info"
     "cli core variable initialize"
@@ -28,15 +29,7 @@ Description
 EOF
 }
 
-cli::core::variable::declare::main() {
-    cli::core::variable::parse "$@"
-    cli::core::variable::declare "${MAPFILE[*]}" "${REPLY}"
-}
-
 cli::core::variable::declare() {
-    local SCOPE_NAME="${ARG_SCOPE-}"
-    [[ "${SCOPE_NAME}" ]] || cli::assert 'Missing scope.'
-
     local TYPE="${1-}"
     [[ "${TYPE}" ]] || cli::assert 'Missing type.'
     shift
